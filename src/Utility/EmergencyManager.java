@@ -1,6 +1,14 @@
 package Utility;
 
 import java.util.PriorityQueue;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.Statement;
+
+import Util.DBConnection;
+import Util.PDFGenerator;
+
 import java.util.Scanner;
 
 import Exceptions.EmptyEmergencyQueueException;
@@ -14,9 +22,51 @@ public class EmergencyManager {
     public EmergencyManager() {
 
         queue = new PriorityQueue<>(
-                (a, b) ->
-                b.getPriority()
-                - a.getPriority());
+                (a,b) ->
+                b.getPriority() - a.getPriority());
+
+        loadEmergencyRequests();
+    }
+    private void loadEmergencyRequests() {
+
+        try {
+
+            Connection con =
+                    DBConnection.getConnection();
+
+            Statement stmt =
+                    con.createStatement();
+
+            ResultSet rs =
+                    stmt.executeQuery(
+                            "SELECT * FROM emergency_requests WHERE status='Pending'");
+
+            while(rs.next()) {
+
+                EmergencyRequest request =
+                        new EmergencyRequest(
+
+                                rs.getInt("request_id"),
+
+                                rs.getString("location"),
+
+                                rs.getString("emergency_type"),
+
+                                rs.getInt("priority"));
+
+                queue.add(request);
+            }
+
+            rs.close();
+            stmt.close();
+            con.close();
+
+        }
+
+        catch(Exception e) {
+
+            e.printStackTrace();
+        }
     }
 
     public void displayEmergencyMenu() {
@@ -32,7 +82,8 @@ public class EmergencyManager {
             System.out.println("1. Add Emergency Request");
             System.out.println("2. Process Emergency");
             System.out.println("3. Display Emergency Queue");
-            System.out.println("4. Back");
+            System.out.println("4. Generate PDF");
+            System.out.println("5. Back");
             System.out.print("Enter Choice : ");
 
             choice = sc.nextInt();
@@ -52,14 +103,19 @@ public class EmergencyManager {
                     break;
 
                 case 4:
-                    System.out.println("Returning...");
+
+                    PDFGenerator.generateEmergencyReport();
+
                     break;
 
+                case 5:
+
+                    break;
                 default:
                     System.out.println("Invalid Choice");
             }
 
-        } while(choice != 4);
+        } while(choice != 5);
     }
 
     private void addEmergency(Scanner sc) {
@@ -138,62 +194,144 @@ public class EmergencyManager {
                         emergencyType,
                         priority);
 
-        queue.add(request);
+        try {
 
-        System.out.println(
-                "Emergency Request Added Successfully");
-    }
+            Connection con =
+                    DBConnection.getConnection();
 
+            PreparedStatement ps =
+                    con.prepareStatement(
+                            "INSERT INTO emergency_requests VALUES(?,?,?,?,?,NOW())");
+            ps.setInt(1,id);
+
+            ps.setString(2,location);
+
+            ps.setString(3,emergencyType);
+
+            ps.setInt(4,priority);
+
+            ps.setString(5,"Pending");
+
+            ps.executeUpdate();
+
+            queue.add(request);
+
+            System.out.println(
+                    "Emergency Request Added Successfully");
+
+            ps.close();
+
+            con.close();
+
+        }
+
+        catch(Exception e) {
+
+            e.printStackTrace();
+        }}
     private void processEmergency() {
 
-    	try {
+        try {
 
-    	    if(queue.isEmpty()) {
+            if(queue.isEmpty()) {
 
-    	        throw new EmptyEmergencyQueueException(
-    	                "No Emergency Requests Available.");
-    	    }
+                throw new EmptyEmergencyQueueException(
+                        "No Emergency Requests Available.");
+            }
 
-    	    EmergencyRequest request =
-    	            queue.poll();
+            EmergencyRequest request =
+                    queue.poll();
 
-    	    System.out.println(
-    	            "\nProcessing Emergency:");
+            Connection con =
+                    DBConnection.getConnection();
 
-    	    System.out.println(request);
+            PreparedStatement ps =
+                    con.prepareStatement(
 
-    	}
+                            "UPDATE emergency_requests SET status=? WHERE request_id=?");
 
-    	catch(EmptyEmergencyQueueException e) {
+            ps.setString(1,"Completed");
 
-    	    System.out.println(e.getMessage());
-    	}
+            ps.setInt(2,
+                    request.getRequestId());
 
-        EmergencyRequest request =
-                queue.poll();
+            ps.executeUpdate();
 
-        System.out.println(
-                "\nProcessing Emergency:");
+            System.out.println(
+                    "\nProcessing Emergency\n");
 
-        System.out.println(request);
+            System.out.println(request);
+
+            ps.close();
+
+            con.close();
+
+        }
+
+        catch(EmptyEmergencyQueueException e) {
+
+            System.out.println(
+                    e.getMessage());
+        }
+
+        catch(Exception e) {
+
+            e.printStackTrace();
+        }
     }
+   
 
     private void displayQueue() {
 
-        if(queue.isEmpty()) {
+        try {
+
+            Connection con =
+                    DBConnection.getConnection();
+
+            Statement stmt =
+                    con.createStatement();
+
+            ResultSet rs =
+                    stmt.executeQuery(
+
+                    "SELECT * FROM emergency_requests WHERE status='Pending'");
 
             System.out.println(
-                    "Emergency Queue Empty");
+                    "\n===== EMERGENCY QUEUE =====");
 
-            return;
+            while(rs.next()) {
+
+                System.out.println(
+
+                        "Request ID : "
+                        + rs.getInt("request_id")
+
+                        + "\nLocation : "
+                        + rs.getString("location")
+
+                        + "\nType : "
+                        + rs.getString("emergency_type")
+
+                        + "\nPriority : "
+                        + rs.getInt("priority")
+
+                        + "\nStatus : "
+                        + rs.getString("status")
+
+                        + "\n");
+            }
+
+            rs.close();
+
+            stmt.close();
+
+            con.close();
+
         }
 
-        System.out.println("\n===== Emergency Queue =====");
+        catch(Exception e) {
 
-        for(EmergencyRequest request
-                : queue) {
-
-            System.out.println(request);
+            e.printStackTrace();
         }
     }
 }

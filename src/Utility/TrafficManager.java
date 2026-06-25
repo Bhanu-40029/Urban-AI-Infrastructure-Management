@@ -1,5 +1,8 @@
 package Utility;
 
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Scanner;
 
@@ -8,6 +11,7 @@ import Exceptions.InvalidMenuChoiceException;
 import Exceptions.InvalidRoadException;
 import Exceptions.RouteNotFoundException;
 import Service.TrafficData;
+import Util.DBConnection;
 import Util.DatasetLoader;
 
 public class TrafficManager {
@@ -19,6 +23,55 @@ public class TrafficManager {
 
         trafficList = DatasetLoader.loadDataset();
 
+        graph = new Graph(10);
+
+        loadRoadNetwork();
+    }
+    private void loadRoadNetwork() {
+
+        try {
+
+            Connection con =
+                    DBConnection.getConnection();
+
+            Statement stmt =
+                    con.createStatement();
+
+            ResultSet rs =
+                    stmt.executeQuery(
+                            "SELECT * FROM road_network");
+
+            while(rs.next()) {
+
+                int source =
+                        rs.getInt("source");
+
+                int destination =
+                        rs.getInt("destination");
+
+                int distance =
+                        rs.getInt("distance");
+
+                int time =
+                        rs.getInt("travel_time");
+
+                graph.addEdge(
+                        source,
+                        destination,
+                        distance,
+                        time);
+            }
+
+            rs.close();
+            stmt.close();
+            con.close();
+
+        }
+
+        catch(Exception e) {
+
+            e.printStackTrace();
+        }
     }
 
     public void displayTrafficMenu() throws RouteNotFoundException {

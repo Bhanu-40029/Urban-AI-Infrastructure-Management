@@ -1,7 +1,8 @@
 package Util;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
+import java.sql.Connection;
+import java.sql.Statement;
+import java.sql.ResultSet;
 import java.util.ArrayList;
 
 import Service.TrafficData;
@@ -15,88 +16,51 @@ public class DatasetLoader {
 
         try {
 
-            BufferedReader br =
-                    new BufferedReader(
-                            new FileReader(
-                                    "src/data/Dataset 200.csv"));
+            Connection con =
+                    DBConnection.getConnection();
 
-            String line;
+            Statement st =
+                    con.createStatement();
 
-            br.readLine(); // Skip Header
+            ResultSet rs =
+                    st.executeQuery(
+                    "SELECT * FROM `dataset 200`");
 
-            while((line = br.readLine()) != null) {
+            while(rs.next()) {
 
-                if(line.trim().isEmpty()) {
-                    continue;
-                }
+                TrafficData traffic =
+                        new TrafficData(
 
-                String[] data = line.split(",");
+                        rs.getString("Area Name"),
 
-                if(data.length < 15) {
-                    continue;
-                }
+                        rs.getString("Road/Intersection Name"),
 
-                try {
+                        rs.getInt("Traffic Volume"),
 
-                    String areaName = data[1];
+                        rs.getDouble("Average Speed"),
 
-                    String roadName = data[2];
+                        rs.getDouble("Congestion Level"),
 
-                    int trafficVolume =
-                            (int) Double.parseDouble(
-                                    data[3]);
+                        rs.getInt("Incident Reports"),
 
-                    double averageSpeed =
-                            Double.parseDouble(
-                                    data[4]);
+                        rs.getInt("Pedestrian and Cyclist Count"),
 
-                    double congestionLevel =
-                            Double.parseDouble(
-                                    data[6]);
+                        rs.getString("Weather Conditions")
+                );
 
-                    int incidentReports =
-                            (int) Double.parseDouble(
-                                    data[8]);
-
-                    int pedestrianCount =
-                            (int) Double.parseDouble(
-                                    data[13]);
-
-                    String weather =
-                            data[14];
-
-                    TrafficData traffic =
-                            new TrafficData(
-                                    areaName,
-                                    roadName,
-                                    trafficVolume,
-                                    averageSpeed,
-                                    congestionLevel,
-                                    incidentReports,
-                                    pedestrianCount,
-                                    weather);
-
-                    trafficList.add(traffic);
-
-                }
-
-                catch(Exception ex) {
-
-                    System.out.println(
-                            "Skipping Corrupted Row");
-                }
+                trafficList.add(traffic);
             }
 
-            br.close();
+            con.close();
 
-            System.out.println("Dataset Loaded Successfully");
+            System.out.println(
+                    "Data Loaded From Database");
 
         }
 
         catch(Exception e) {
 
-            System.out.println(
-                    "Error : " + e.getMessage());
+            System.out.println(e);
         }
 
         return trafficList;

@@ -1,5 +1,6 @@
 package Main;
-
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Scanner;
 
@@ -16,7 +17,7 @@ import Utility.ResourceManager;
 import Utility.TrafficManager;
 
 public class UrbanAI {
-	public static void main(String [] args) throws RouteNotFoundException {
+	public static void main(String [] args) throws RouteNotFoundException, SQLException {
 		 Scanner sc = new Scanner(System.in);
 
 	        InfrastructureManager infrastructureManager =new InfrastructureManager();
